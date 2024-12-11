@@ -7,8 +7,8 @@ import torch.optim as optim
 import torch.utils.data as data
 from lightning.fabric import Fabric
 
-from .optmizer import get_optimizer
-from .scheduler import get_scheduler, NothingSchduler
+from .optimizer import get_optimizer
+from .scheduler import get_scheduler, NothingScheduler
 from .config import OptimizerConfig, SchedulerConfig, TrainConfig
 from .saving import ModelSavingStrategy, get_saving_callback
 
@@ -50,11 +50,11 @@ class ModelForTraining(ABC):
                 **scheduler_config.args,
             )
         else:
-            scheduler = NothingSchduler(optimizer)
+            scheduler = NothingScheduler(optimizer)
 
         self.optimizer = self.fabric.setup_optimizers(
             optimizer,
-        )  # type: ignore
+        )  # type: ignore  # Fabric's setup_optimizers method may not be recognized by type checkers
         self.scheduler = scheduler
 
     @abstractmethod
@@ -107,12 +107,12 @@ class ModelForTraining(ABC):
         self.model.train()
         # if the optimizer has train(), call it
         if hasattr(self.optimizer, "train"):
-            self.optimizer.train()  # type: ignore
+            self.optimizer.train()  # type: ignore  # Some optimizers might not have a train method
 
     def after_train_epoch(self):
         self.model.eval()
         if hasattr(self.optimizer, "eval"):
-            self.optimizer.eval()  # type: ignore
+            self.optimizer.eval()  # type: ignore  # Some optimizers might not have an eval method
 
     def before_eval_epoch(self):
         self.model.eval()
@@ -141,7 +141,7 @@ class Trainer:
     ) -> None:
         self.config = config
         self.train_dataloader = train_dataloader
-        self.eval_dataloaders = eval_dataloader
+        self.eval_dataloader = eval_dataloader
         self.seed = seed
 
         self.saving_strategy = ModelSavingStrategy.from_config(
@@ -153,7 +153,7 @@ class Trainer:
 
         self.fabric = Fabric()
 
-    def setup_model(self, model_cls, *args, **kwargs):
+    def set_model_class(self, model_cls, *args, **kwargs):
         self.model = model_cls(self.fabric, self.config, *args, **kwargs)
 
     def get_saving_callbacks(self):
@@ -164,7 +164,6 @@ class Trainer:
     def before_train(self):
         self.fabric.seed_everything(self.seed)
 
-        self.model.setup_model()
         self.model.setup_optimizer()
 
     def after_train(self):
@@ -190,16 +189,15 @@ class Trainer:
             self.model.after_train_epoch()
             self.call_saving_callbacks(epoch, current_step)
 
-            if self.eval_dataloaders is not None:
+            if self.eval_dataloader is not None:
                 self.model.before_eval_epoch()
 
-                for eval_dataloader in self.eval_dataloaders:
-                    for batch in eval_dataloader:
-                        self.model.before_eval_step()
+                for batch in self.eval_dataloader:
+                    self.model.before_eval_step()
 
-                        loss = self.model.eval_step(batch)
+                    loss = self.model.eval_step(batch)
 
-                        self.model.after_eval_step()
+                    self.model.after_eval_step()
 
                 self.model.after_eval_epoch()
 

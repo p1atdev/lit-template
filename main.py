@@ -17,7 +17,7 @@ def main():
     config = TrainConfig.from_config_file(args.config)
 
     trainer = Trainer(config, train_dataloader=range(100))
-    trainer.setup_model(MnistModelForTraining)
+    trainer.set_model_class(MnistModelForTraining)
 
 
 if __name__ == "__main__":
