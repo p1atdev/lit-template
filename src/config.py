@@ -5,9 +5,15 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
+from .saving import (
+    HFHubSavingCallbackConfig,
+    SafetensorsSavingCallbackConfig,
+    ModelSavingStrategyConfig,
+)
+
 
 class ModelConfig(BaseModel):
-    pass
+    hidden_dim: int = 128
 
 
 class DatasetConfig(BaseModel):
@@ -21,28 +27,38 @@ class LoggingConfig(BaseModel):
     run_name: str | None = None
 
 
-class SaveConfig(BaseModel):
-    # path to save the model
-    directory: str
+class OptimizerConfig(BaseModel):
+    name: str = "torch.optim.AdamW"
+    args: dict = {}
+
+
+class SchedulerConfig(BaseModel):
+    name: str = "torch.optim.lr_scheduler.ConstantLR"
+    args: dict = {}
+
+
+class SavingConfig(BaseModel):
+    strategy: ModelSavingStrategyConfig = ModelSavingStrategyConfig()
+    callbacks: list[SafetensorsSavingCallbackConfig | HFHubSavingCallbackConfig] = [
+        SafetensorsSavingCallbackConfig(name="model", save_dir="./output")
+    ]
 
 
 class TrainConfig(BaseModel):
     model: ModelConfig
     dataset: DatasetConfig
-    save: SaveConfig
+    # save: SaveConfig
+    optimizer: OptimizerConfig = OptimizerConfig()
+    scheduler: SchedulerConfig | None = None
     logging: LoggingConfig | None = None
+    saving: SavingConfig = SavingConfig()
 
-    optimizer: str = "torch.optim.AdamW"
-    optimizer_args: dict = {}
+    seed: int = 42
 
-    scheduler: str = "torch.optim.lr_scheduler.ConstantLR"
-    scheduler_args: dict = {}
-
-    trainer_args: dict = {}
-    dataloaders_args: dict = {}
+    num_train_epochs: int = 1
 
     torch_compile: bool = False
-    fp32_matmul_precision: str | None = None
+    fp32_matmul_precision: Literal["highest", "high", "medium"] | None = None
 
     def to_dict(self) -> dict:
         return self.model_dump()

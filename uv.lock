@@ -205,6 +205,15 @@ wheels = [
 ]
 
 [[package]]
+name = "braceexpand"
+version = "0.1.7"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/54/93/badd4f5ccf25209f3fef2573073da9fe4a45a3da99fca2f800f942130c0f/braceexpand-0.1.7.tar.gz", hash = "sha256:e6e539bd20eaea53547472ff94f4fb5c3d3bf9d0a89388c4b56663aba765f705", size = 7777 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fa/93/e8c04e80e82391a6e51f218ca49720f64236bc824e92152a2633b74cf7ab/braceexpand-0.1.7-py2.py3-none-any.whl", hash = "sha256:91332d53de7828103dcae5773fb43bc34950b0c8160e35e0f44c4427a3b85014", size = 5923 },
+]
+
+[[package]]
 name = "certifi"
 version = "2024.8.30"
 source = { registry = "https://pypi.org/simple" }
@@ -1119,6 +1128,7 @@ dependencies = [
     { name = "tqdm" },
     { name = "transformers" },
     { name = "wandb" },
+    { name = "webdataset" },
 ]
 
 [package.dev-dependencies]
@@ -1145,6 +1155,7 @@ requires-dist = [
     { name = "tqdm", specifier = ">=4.67.1" },
     { name = "transformers", specifier = ">=4.47.0" },
     { name = "wandb", specifier = ">=0.18.7" },
+    { name = "webdataset", specifier = ">=0.2.100" },
 ]
 
 [package.metadata.requires-dev]
@@ -2520,6 +2531,20 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/7b/29/061ec845fb58521848f3739e466efd8250b4b7b98c1b6c5bf4d40b419b7e/webcolors-24.11.1.tar.gz", hash = "sha256:ecb3d768f32202af770477b8b65f318fa4f566c22948673a977b00d589dd80f6", size = 45064 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/60/e8/c0e05e4684d13459f93d312077a9a2efbe04d59c393bc2b8802248c908d4/webcolors-24.11.1-py3-none-any.whl", hash = "sha256:515291393b4cdf0eb19c155749a096f779f7d909f7cceea072791cb9095b92e9", size = 14934 },
+]
+
+[[package]]
+name = "webdataset"
+version = "0.2.100"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "braceexpand" },
+    { name = "numpy" },
+    { name = "pyyaml" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/df/5c/0334e75215a215d9d714f7f80b62306d3c1498c6170c0b8d9d9d980089f1/webdataset-0.2.100.tar.gz", hash = "sha256:798e30ff700277f0b963dc0395f3b9de4971a67cffc7cb6d0cb9225df7b68e42", size = 85368 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8e/84/cf2319c375f4e061f27354685295905dc81105d2a2d2239baaf6f6e73c87/webdataset-0.2.100-py3-none-any.whl", hash = "sha256:f70a8e1f6d4f5268b364bd6f77fe8a1168ea14e7e9ed455d71f8d29585fd86af", size = 74796 },
 ]
 
 [[package]]

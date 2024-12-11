@@ -4,7 +4,15 @@ from huggingface_hub import HfApi
 
 from torch.nn.modules import Module
 
-from .safetensors import SafetensorsSavingCallback
+from .safetensors import SafetensorsSavingCallback, SafetensorsSavingCallbackConfig
+
+
+class HFHubSavingCallbackConfig(SafetensorsSavingCallbackConfig):
+    type: str = "hf_hub"
+
+    hub_id: str
+    dir_in_repo: str
+    repo_type: str = "model"
 
 
 class HFHubSavingCallback(SafetensorsSavingCallback):

@@ -63,6 +63,7 @@ def test_model_saving_strategy_sanity_check():
             strategy = ModelSavingStrategy(
                 total_epochs=total_epochs,
                 steps_per_epoch=steps_per_epoch,
+                save_last=True,
                 **case[0],
             )
             strategy.sanity_check()
@@ -140,6 +141,7 @@ def test_model_saving_strategy_should_save():
             strategy = ModelSavingStrategy(
                 total_epochs=100,
                 steps_per_epoch=1000,
+                save_last=True,
                 **case[0],
             )
             strategy.sanity_check()

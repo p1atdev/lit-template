@@ -1,7 +1,11 @@
 from safetensors.torch import save_file
 from torch.nn.modules import Module
 
-from .util import ModelSavingCallback
+from .util import ModelSavingCallback, ModelSavingCallbackConfig
+
+
+class SafetensorsSavingCallbackConfig(ModelSavingCallbackConfig):
+    type: str = "safetensors"
 
 
 class SafetensorsSavingCallback(ModelSavingCallback):

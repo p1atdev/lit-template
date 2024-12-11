@@ -6,13 +6,46 @@ import torch
 import torch.nn as nn
 
 
-class ModelSavingStrategy(BaseModel):
+class ModelSavingStrategyConfig(BaseModel):
+    per_epochs: int | float | None = 1
+    per_steps: int | None = None
+    save_last: bool = True
+
+
+class ModelSavingStrategy:
     per_epochs: int | float | None = None
     per_steps: int | None = None
     save_last: bool = True
 
     total_epochs: int
     steps_per_epoch: int
+
+    def __init__(
+        self,
+        total_epochs: int,
+        steps_per_epoch: int,
+        per_epochs: int | float | None,
+        per_steps: int | None,
+        save_last: bool,
+    ):
+        self.per_epochs = per_epochs
+        self.per_steps = per_steps
+        self.save_last = save_last
+
+        self.total_epochs = total_epochs
+        self.steps_per_epoch = steps_per_epoch
+
+        self.sanity_check()
+
+    @classmethod
+    def from_config(
+        cls, config: ModelSavingStrategyConfig, total_epochs: int, steps_per_epoch: int
+    ) -> "ModelSavingStrategy":
+        return cls(
+            total_epochs=total_epochs,
+            steps_per_epoch=steps_per_epoch,
+            **config.model_dump(),
+        )
 
     @property
     def total_steps(self) -> int:
@@ -86,6 +119,13 @@ class ModelSavingStrategy(BaseModel):
         return False
 
 
+class ModelSavingCallbackConfig(BaseModel):
+    type: str
+
+    name: str
+    save_dir: str | Path
+
+
 class ModelSavingCallback(ABC):
     save_name_template: str = "{name}_{epoch:05}e_{steps:06}s.safetensors"
     name: str
@@ -105,6 +145,15 @@ class ModelSavingCallback(ABC):
             self.save_name_template = save_name_template
 
         self.sanity_check()
+
+    @classmethod
+    def from_config(
+        cls, config: ModelSavingCallbackConfig, **kwargs
+    ) -> "ModelSavingCallback":
+        config_dict = config.model_dump()
+        config_dict.pop("type")
+
+        return cls(**config_dict, **kwargs)
 
     def sanity_check(self):
         pass
