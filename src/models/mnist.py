@@ -3,14 +3,12 @@ from pydantic import BaseModel
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from lightning.fabric import Fabric
 
 from ..trainer import ModelForTraining
-from ..config import OptimizerConfig
 
 
 class MnistConfig(BaseModel):
-    num_pixels: int = 768
+    num_pixels: int = 784
     hidden_dim: int = 128
     num_labels: int = 10
 
@@ -21,15 +19,13 @@ class MnistModel(nn.Module):
 
         self.config = config
 
-        self.layers = nn.ModuleList(
-            [
-                nn.Linear(config.num_pixels, config.hidden_dim),
-                nn.ReLU(),
-                nn.Linear(config.hidden_dim, config.hidden_dim),
-                nn.ReLU(),
-                nn.Linear(config.hidden_dim, config.num_labels),
-                nn.LogSoftmax(dim=1),
-            ]
+        self.layers = nn.Sequential(
+            nn.Linear(config.num_pixels, config.hidden_dim),
+            nn.ReLU(),
+            nn.Linear(config.hidden_dim, config.hidden_dim),
+            nn.ReLU(),
+            nn.Linear(config.hidden_dim, config.num_labels),
+            nn.LogSoftmax(dim=1),
         )
 
     def forward(self, pixel_values: torch.Tensor):
@@ -43,16 +39,25 @@ class MnistModel(nn.Module):
 class MnistModelForTraining(ModelForTraining, nn.Module):
     model: nn.Module
 
+    model_config: MnistConfig
+    model_config_class = MnistConfig
+
     def setup_model(self):
         with self.fabric.rank_zero_first():
-            print("Loading model")
-
-            model = MnistModel(self.model_config)
+            print("Initializing model")
+            with self.fabric.init_module():
+                model = MnistModel(self.model_config)
 
         self.fabric.barrier()
 
-        model = self.fabric.broadcast(model)
+        # model = self.fabric.broadcast(model)
         self.model = self.fabric.setup_module(model)
+
+    @torch.no_grad()
+    def sanity_check(self):
+        pixel_values = torch.randn(1, self.model_config.num_pixels)
+        logits = self.model(pixel_values)
+        assert logits.shape == (1, self.model_config.num_labels)
 
     def train_step(self, batch):
         self.before_train_step()

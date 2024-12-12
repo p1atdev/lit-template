@@ -12,15 +12,6 @@ from .saving import (
 )
 
 
-class ModelConfig(BaseModel):
-    hidden_dim: int = 128
-
-
-class DatasetConfig(BaseModel):
-    train: str
-    val: str
-
-
 class LoggingConfig(BaseModel):
     provider: str | None = None
     project_name: str | None = None
@@ -45,9 +36,8 @@ class SavingConfig(BaseModel):
 
 
 class TrainConfig(BaseModel):
-    model: ModelConfig
-    dataset: DatasetConfig
-    # save: SaveConfig
+    model: dict
+    dataset: dict
     optimizer: OptimizerConfig = OptimizerConfig()
     scheduler: SchedulerConfig | None = None
     logging: LoggingConfig | None = None

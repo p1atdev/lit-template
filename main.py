@@ -3,6 +3,7 @@ import argparse
 from src.models.mnist import MnistModelForTraining
 from src.trainer import Trainer
 from src.config import TrainConfig
+from src.dataset.mnist import MnistDatasetConfig
 
 
 def prepare_args():
@@ -16,8 +17,14 @@ def main():
 
     config = TrainConfig.from_config_file(args.config)
 
-    trainer = Trainer(config, train_dataloader=range(100))
-    trainer.set_model_class(MnistModelForTraining)
+    trainer = Trainer(
+        config,
+        only_sanity_check=True,
+    )
+    trainer.register_dataset_class(MnistDatasetConfig)
+    trainer.register_model_class(MnistModelForTraining)
+
+    trainer.train()
 
 
 if __name__ == "__main__":

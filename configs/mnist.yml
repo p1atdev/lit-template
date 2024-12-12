@@ -1,13 +1,15 @@
 model:
+  num_pixels: 784
   hidden_dim: 128
+  num_labels: 10
 
 dataset:
-  train: "./dataset/mnist/train"
-  val: "./dataset/mnist/val"
+  repo_id: "ylecun/mnist"
 
 optimizer:
   name: "torch.optim.AdamW"
-  args: {}
+  args:
+    lr: 0.001
 
 scheduler:
   name: "torch.optim.lr_scheduler.ConstantLR"
