@@ -108,11 +108,11 @@ class ModelSavingStrategy:
         if epoch == 0 and steps == 0:
             return False  # skip the first step
 
-        if self._per_epochs is not None:
-            if epoch % self._per_epochs == 0:
+        if self._per_epochs is not None and epoch != 0:
+            if steps % (self.steps_per_epoch * self._per_epochs) == 0:
                 return True
 
-        if self._per_steps is not None:
+        if self._per_steps is not None and steps != 0:
             if steps % self._per_steps == 0:
                 return True
 

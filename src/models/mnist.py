@@ -66,6 +66,8 @@ class MnistModelForTraining(ModelForTraining, nn.Module):
         logits = self.model(pixel_values)
         loss = F.cross_entropy(logits, targets.squeeze())
 
+        self.log("train/loss", loss, on_step=True, on_epoch=True)
+
         return loss
 
     def eval_step(self, batch: tuple[torch.Tensor, torch.Tensor]):
@@ -74,22 +76,18 @@ class MnistModelForTraining(ModelForTraining, nn.Module):
         logits = self.model(pixel_values)
         loss = F.cross_entropy(logits, targets.squeeze())
 
+        self.log("eval/loss", loss, on_step=False, on_epoch=True)
+
         return loss
 
     def before_load_model(self):
-        pass
+        super().before_load_model()
 
     def after_load_model(self):
-        pass
-
-    def after_train_step(self):
-        pass
+        super().after_load_model()
 
     def before_eval_step(self):
-        pass
-
-    def after_eval_step(self):
-        pass
+        super().before_eval_step()
 
     def before_backward(self):
-        pass
+        super().before_backward()

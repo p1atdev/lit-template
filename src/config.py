@@ -12,12 +12,6 @@ from .saving import (
 )
 
 
-class LoggingConfig(BaseModel):
-    provider: str | None = None
-    project_name: str | None = None
-    run_name: str | None = None
-
-
 class OptimizerConfig(BaseModel):
     name: str = "torch.optim.AdamW"
     args: dict = {
@@ -37,13 +31,23 @@ class SavingConfig(BaseModel):
     ]
 
 
+class TrackerConfig(BaseModel):
+    name: Literal["wandb", "tensorboard", "csv"]
+    args: dict = {}
+
+
+# class LoggingConfig(BaseModel):
+#     trackers: list[TrackerConfig] = []
+
+
 class TrainConfig(BaseModel):
     model: dict | BaseModel
     dataset: dict | BaseModel
     optimizer: OptimizerConfig = OptimizerConfig()
     scheduler: SchedulerConfig | None = None
-    logging: LoggingConfig | None = None
     saving: SavingConfig = SavingConfig()
+    # logging: LoggingConfig | None = None
+    trackers: list[TrackerConfig] = []
 
     seed: int = 42
 

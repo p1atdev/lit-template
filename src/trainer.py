@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from pydantic import BaseModel
+from tqdm import tqdm
 
 import torch
 import torch.nn as nn
@@ -14,6 +15,7 @@ from .config import TrainConfig
 from .saving import ModelSavingStrategy, get_saving_callback
 from .dataset.util import DatasetConfig
 from .dataloader import get_dataloader
+from .utils.logging import get_trackers
 
 
 class ModelForTraining(ABC):
@@ -25,6 +27,10 @@ class ModelForTraining(ABC):
     model: nn.Module
     optimizer: optim.Optimizer
     scheduler: optim.lr_scheduler._LRScheduler
+
+    _current_step: int = 0
+    _logs_at_step: dict = {}
+    _logs_at_epoch: dict[str, list] = {}
 
     def __init__(
         self,
@@ -96,18 +102,18 @@ class ModelForTraining(ABC):
 
     def before_train_step(self):
         self.optimizer.zero_grad()
+        self.increment_step()
 
-    @abstractmethod
     def after_train_step(self):
-        pass
+        self._log_metadata()
+        self._send_logs_at_step()
 
     @abstractmethod
     def before_eval_step(self):
         pass
 
-    @abstractmethod
     def after_eval_step(self):
-        pass
+        self._send_logs_at_step()
 
     @abstractmethod
     def before_backward(self):
@@ -124,6 +130,7 @@ class ModelForTraining(ABC):
             self.optimizer.train()  # type: ignore  # Some optimizers might not have a train method
 
     def after_train_epoch(self):
+        self._send_logs_at_epoch()
         self.model.eval()
         if hasattr(self.optimizer, "eval"):
             self.optimizer.eval()  # type: ignore  # Some optimizers might not have an eval method
@@ -134,13 +141,63 @@ class ModelForTraining(ABC):
             self.optimizer.eval()  # type: ignore
 
     def after_eval_epoch(self):
-        pass
+        self._send_logs_at_epoch()
 
     def before_save_model(self):
         pass
 
     def after_save_model(self):
         pass
+
+    def print(self, *args, **kwargs):
+        self.fabric.print(*args, **kwargs)
+
+    def log(
+        self,
+        name: str,
+        value,
+        on_step: bool = True,
+        on_epoch: bool = False,
+    ):
+        if isinstance(value, torch.Tensor):
+            with torch.no_grad():
+                value = self.fabric.all_gather(value)
+                value = value.mean().item()
+
+        if on_step:
+            self._logs_at_step[name] = value
+        if on_epoch:
+            if name not in self._logs_at_epoch:
+                self._logs_at_epoch[name] = []
+            self._logs_at_epoch[name].append(value)
+
+    def _send_logs_at_step(self):
+        self.fabric.log_dict(self._logs_at_step, step=self._current_step)
+        self._logs_at_step = {}
+
+    def _send_logs_at_epoch(self):
+        for name, values in self._logs_at_epoch.items():
+            if isinstance(values[0], torch.Tensor):
+                values = [v.mean().item() for v in values]
+
+            if isinstance(values[0], float) or isinstance(values[0], int):
+                self.fabric.log(
+                    f"{name}_epoch",
+                    sum(values) / len(values),
+                    step=self._current_step,
+                )
+            else:
+                for i, value in enumerate(values):
+                    self.fabric.log(f"{name}_{i}_epoch", value, step=self._current_step)
+        self._logs_at_epoch = {}
+
+    def _log_metadata(self):
+        # learning rate
+        for i, param_group in enumerate(self.optimizer.param_groups):
+            self.log(f"lr/group_{i}", param_group["lr"], on_step=True, on_epoch=False)
+
+    def increment_step(self):
+        self._current_step += 1
 
 
 class Trainer:
@@ -166,7 +223,9 @@ class Trainer:
         self.seed = seed
         self.only_sanity_check = only_sanity_check
 
-        self.fabric = Fabric()
+        self.fabric = Fabric(
+            loggers=get_trackers(config.trackers) if not only_sanity_check else [],
+        )
 
     def register_model_class(self, model_cls, *args, **kwargs):
         self.model_cls = model_cls
@@ -211,35 +270,35 @@ class Trainer:
         self.saving_callbacks = self.get_saving_callbacks()
 
     def before_train(self):
-        self.log("before_train()")
-        self.log(f"Seed: {self.seed}")
+        self.print("before_train()")
+        self.print(f"Seed: {self.seed}")
         self.fabric.seed_everything(self.seed)
 
-        self.log("Setting up dataloaders")
+        self.print("Setting up dataloaders")
         self.prepare_dataloaders()
 
-        self.log("Setting up saving strategy")
+        self.print("Setting up saving strategy")
         self.prepare_saving_strategy()
 
-        self.log("Setting up model")
+        self.print("Setting up model")
         self.model.setup_model()
-        self.log("Setting up optimizer")
+        self.print("Setting up optimizer")
         self.model.setup_optimizer()
 
     def after_train(self):
-        self.log("after_train()")
+        self.print("after_train()")
         pass
 
     def training_loop(self):
-        self.log("training_loop()")
+        self.print("training_loop()")
 
         current_step = 0
         total_epochs = self.config.num_train_epochs
 
-        for epoch in range(total_epochs):
+        for epoch in range(1, total_epochs + 1):  # shift to 1-indexed
             self.model.before_train_epoch()
 
-            for batch in self.train_dataloader:
+            for batch in tqdm(self.train_dataloader, desc=f"Train Epoch {epoch}"):
                 current_step += 1
                 self.model.before_train_step()
 
@@ -253,12 +312,13 @@ class Trainer:
                     break
 
             self.model.after_train_epoch()
+            self.model.log("epoch", epoch)
             self.call_saving_callbacks(epoch, current_step)
 
             if self.eval_dataloader is not None:
                 self.model.before_eval_epoch()
 
-                for batch in self.eval_dataloader:
+                for batch in tqdm(self.eval_dataloader, desc=f"Eval Epoch {epoch}"):
                     self.model.before_eval_step()
 
                     loss = self.model.eval_step(batch)
@@ -291,5 +351,11 @@ class Trainer:
 
         self.after_train()
 
-    def log(self, *args, **kwargs):
+    def print(self, *args, **kwargs):
         self.fabric.print(*args, **kwargs)
+
+    def log(self, *args, **kwargs):
+        if self.only_sanity_check:
+            return
+
+        self.fabric.log(*args, **kwargs)

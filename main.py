@@ -9,6 +9,7 @@ from src.dataset.mnist import MnistDatasetConfig
 def prepare_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=str, required=True)
+    parser.add_argument("--debug", action="store_true")
     return parser.parse_args()
 
 
@@ -19,7 +20,7 @@ def main():
 
     trainer = Trainer(
         config,
-        only_sanity_check=True,
+        only_sanity_check=args.debug,
     )
     trainer.register_dataset_class(MnistDatasetConfig)
     trainer.register_model_class(MnistModelForTraining)
