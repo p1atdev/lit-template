@@ -55,9 +55,10 @@ class MnistModelForTraining(ModelForTraining, nn.Module):
 
     @torch.no_grad()
     def sanity_check(self):
-        pixel_values = torch.randn(1, self.model_config.num_pixels)
-        logits = self.model(pixel_values)
-        assert logits.shape == (1, self.model_config.num_labels)
+        with self.fabric.autocast():
+            pixel_values = torch.randn(1, self.model_config.num_pixels)
+            logits = self.model(self.fabric.to_device(pixel_values))
+            assert logits.shape == (1, self.model_config.num_labels)
 
     def train_step(self, batch):
         self.before_train_step()

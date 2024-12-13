@@ -1,5 +1,6 @@
 import torch
 import torch.utils.data as data
+import torchvision.transforms.functional as F
 
 from datasets import load_dataset, Dataset, DatasetDict
 
@@ -24,11 +25,11 @@ class MnistDataset(data.Dataset):
         return len(self.dataset)
 
     def __getitem__(self, idx):
-        image = self.dataset[idx]["image"]
+        image = self.dataset[idx]["image"]  # PngImageFile
         label = self.dataset[idx]["label"]
 
         # pil to tensor
-        image = torch.tensor(image, dtype=torch.float32).view(-1)
-        label = torch.tensor(label, dtype=torch.int64)
+        image_tensor = F.pil_to_tensor(image)
+        label_tensor = torch.LongTensor([label])
 
-        return image, label
+        return image_tensor, label_tensor
