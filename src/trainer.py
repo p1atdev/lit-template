@@ -186,17 +186,20 @@ class Trainer:
     def prepare_dataloaders(self):
         train_ds, eval_ds = self.dataset_config.get_dataset()
 
-        self.train_dataloader = get_dataloader(
+        train_dataloader = get_dataloader(
             train_ds,
             batch_size=self.dataset_config.batch_size,
             shuffle=self.dataset_config.shuffle,
             num_workers=self.dataset_config.num_workers,
         )
-        self.eval_dataloader = get_dataloader(
+        eval_dataloader = get_dataloader(
             eval_ds,
             batch_size=self.dataset_config.batch_size,
             shuffle=False,
             num_workers=self.dataset_config.num_workers,
+        )
+        self.train_dataloader, self.eval_dataloader = self.fabric.setup_dataloaders(
+            train_dataloader, eval_dataloader
         )
 
     def prepare_saving_strategy(self):

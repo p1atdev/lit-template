@@ -1,3 +1,5 @@
+from PIL import Image
+
 import torch
 import torch.utils.data as data
 import torchvision.transforms.functional as F
@@ -17,6 +19,12 @@ class MnistDatasetConfig(DatasetConfig):
         return MnistDataset(ds["train"]), MnistDataset(ds["test"])
 
 
+def pil_to_tensor(image: Image.Image) -> torch.Tensor:
+    tensor = F.pil_to_tensor(image)
+    tensor = tensor / 255.0
+    return tensor
+
+
 class MnistDataset(data.Dataset):
     def __init__(self, dataset: Dataset):
         self.dataset = dataset
@@ -29,7 +37,10 @@ class MnistDataset(data.Dataset):
         label = self.dataset[idx]["label"]
 
         # pil to tensor
-        image_tensor = F.pil_to_tensor(image)
+        image_tensor = pil_to_tensor(image)
         label_tensor = torch.LongTensor([label])
+
+        assert image_tensor.shape == torch.Size([1, 28, 28])
+        assert label_tensor.shape == torch.Size([1])
 
         return image_tensor, label_tensor

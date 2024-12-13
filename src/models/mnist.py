@@ -60,27 +60,19 @@ class MnistModelForTraining(ModelForTraining, nn.Module):
             logits = self.model(self.fabric.to_device(pixel_values))
             assert logits.shape == (1, self.model_config.num_labels)
 
-    def train_step(self, batch):
-        self.before_train_step()
-
+    def train_step(self, batch: tuple[torch.Tensor, torch.Tensor]):
         pixel_values, targets = batch
 
         logits = self.model(pixel_values)
-        loss = F.nll_loss(logits, targets)
-
-        self.after_train_step()
+        loss = F.cross_entropy(logits, targets.squeeze())
 
         return loss
 
-    def eval_step(self, batch):
-        self.before_eval_step()
-
+    def eval_step(self, batch: tuple[torch.Tensor, torch.Tensor]):
         pixel_values, targets = batch
 
         logits = self.model(pixel_values)
-        loss = F.nll_loss(logits, targets)
-
-        self.after_eval_step()
+        loss = F.cross_entropy(logits, targets.squeeze())
 
         return loss
 
