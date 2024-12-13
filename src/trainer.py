@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from pydantic import BaseModel
 from tqdm import tqdm
+import warnings
 
 import torch
 import torch.nn as nn
@@ -224,7 +225,9 @@ class Trainer:
         self.only_sanity_check = only_sanity_check
 
         self.fabric = Fabric(
-            loggers=get_trackers(config.trackers) if not only_sanity_check else [],
+            loggers=get_trackers(config.trackers)
+            if not only_sanity_check and config.trackers is not None
+            else [],
         )
 
     def register_model_class(self, model_cls, *args, **kwargs):
@@ -238,9 +241,13 @@ class Trainer:
         self.dataset_config = dataset_config_class.model_validate(self.config.dataset)
 
     def get_saving_callbacks(self):
-        return [
-            get_saving_callback(callback) for callback in self.config.saving.callbacks
-        ]
+        if (saving := self.config.saving) is not None:
+            if len(saving.callbacks) == 0:
+                warnings.warn("No saving callbacks found in the config")
+            return [get_saving_callback(callback) for callback in saving.callbacks]
+
+        self.fabric.print("No saving config. Model will not be saved.")
+        return []
 
     def prepare_dataloaders(self):
         train_ds, eval_ds = self.dataset_config.get_dataset()
@@ -262,11 +269,20 @@ class Trainer:
         )
 
     def prepare_saving_strategy(self):
-        self.saving_strategy = ModelSavingStrategy.from_config(
-            config=self.config.saving.strategy,
-            steps_per_epoch=len(self.train_dataloader),
-            total_epochs=self.config.num_train_epochs,
-        )
+        if (saving := self.config.saving) is not None:
+            self.saving_strategy = ModelSavingStrategy.from_config(
+                config=saving.strategy,
+                steps_per_epoch=len(self.train_dataloader),
+                total_epochs=self.config.num_train_epochs,
+            )
+        else:
+            self.saving_strategy = ModelSavingStrategy(
+                steps_per_epoch=len(self.train_dataloader),
+                total_epochs=self.config.num_train_epochs,
+                per_epochs=None,
+                per_steps=None,
+                save_last=False,
+            )
         self.saving_callbacks = self.get_saving_callbacks()
 
     def before_train(self):
@@ -298,7 +314,11 @@ class Trainer:
         for epoch in range(1, total_epochs + 1):  # shift to 1-indexed
             self.model.before_train_epoch()
 
-            for batch in tqdm(self.train_dataloader, desc=f"Train Epoch {epoch}"):
+            for steps, batch in tqdm(
+                enumerate(self.train_dataloader),
+                total=len(self.train_dataloader),
+                desc=f"Train Epoch {epoch}",
+            ):
                 current_step += 1
                 self.model.before_train_step()
 
@@ -306,7 +326,11 @@ class Trainer:
                 self.model.backward(loss)
 
                 self.model.after_train_step()
-                self.call_saving_callbacks(epoch, current_step)
+
+                # To avoid saving twice at the end of an epoch,
+                # skip the saving check during the epoch and save only at the end.
+                if steps != len(self.train_dataloader) - 1:
+                    self.call_saving_callbacks(epoch, current_step)
 
                 if self.only_sanity_check:
                     break

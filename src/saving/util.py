@@ -53,7 +53,7 @@ class ModelSavingStrategy:
 
     def check_strategy(self) -> bool:
         if self.per_epochs is None and self.per_steps is None:
-            raise ValueError("per_epochs or per_steps must be set")
+            return True
 
         if self.per_epochs is not None:
             if self.per_epochs <= 0:
@@ -105,6 +105,10 @@ class ModelSavingStrategy:
         return self.per_steps
 
     def should_save(self, epoch: int, steps: int) -> bool:
+        # saving is disabled
+        if self.steps_per_epoch is None and self.total_epochs is None:
+            return False
+
         if epoch == 0 and steps == 0:
             return False  # skip the first step
 

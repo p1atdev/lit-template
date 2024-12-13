@@ -36,18 +36,13 @@ class TrackerConfig(BaseModel):
     args: dict = {}
 
 
-# class LoggingConfig(BaseModel):
-#     trackers: list[TrackerConfig] = []
-
-
 class TrainConfig(BaseModel):
     model: dict | BaseModel
     dataset: dict | BaseModel
     optimizer: OptimizerConfig = OptimizerConfig()
     scheduler: SchedulerConfig | None = None
-    saving: SavingConfig = SavingConfig()
-    # logging: LoggingConfig | None = None
-    trackers: list[TrackerConfig] = []
+    saving: SavingConfig | None = SavingConfig()
+    trackers: list[TrackerConfig] | None = []
 
     seed: int = 42
 
