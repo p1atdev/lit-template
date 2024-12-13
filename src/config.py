@@ -20,7 +20,9 @@ class LoggingConfig(BaseModel):
 
 class OptimizerConfig(BaseModel):
     name: str = "torch.optim.AdamW"
-    args: dict = {}
+    args: dict = {
+        "lr": 1e-3,
+    }
 
 
 class SchedulerConfig(BaseModel):
@@ -36,8 +38,8 @@ class SavingConfig(BaseModel):
 
 
 class TrainConfig(BaseModel):
-    model: dict
-    dataset: dict
+    model: dict | BaseModel
+    dataset: dict | BaseModel
     optimizer: OptimizerConfig = OptimizerConfig()
     scheduler: SchedulerConfig | None = None
     logging: LoggingConfig | None = None
