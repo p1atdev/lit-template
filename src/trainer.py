@@ -213,14 +213,10 @@ class Trainer:
     def __init__(
         self,
         config: TrainConfig,
-        # train_dataloader: data.DataLoader,
-        # eval_dataloader: data.DataLoader | None = None,
         seed: int = 42,
         only_sanity_check: bool = False,
     ) -> None:
         self.config = config
-        # self.train_dataloader = train_dataloader
-        # self.eval_dataloader = eval_dataloader
         self.seed = seed
         self.only_sanity_check = only_sanity_check
 
