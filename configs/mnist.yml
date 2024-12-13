@@ -27,7 +27,7 @@ saving:
   #   save_last: true
 
   # callbacks:
-  #   - type: "hf_hub"
+  #   - type: "hf_hub" # or "safentensors" to don't push to hub
   #     name: "mnist"
   #     save_dir: "./output/mnist"
   #     hub_id: "p1atdev/test"
