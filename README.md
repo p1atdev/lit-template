@@ -1,7 +1,5 @@
 # pytorch training template
 
-Just for me to train pytorch models.
-
 Key frameworks:
 
 - [PyTorch](https://pytorch.org/)
