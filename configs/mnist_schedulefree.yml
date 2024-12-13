@@ -9,7 +9,7 @@ dataset:
 optimizer:
   name: "schedulefree.RAdamScheduleFree"
   args:
-    lr: 0.0001
+    lr: 0.0005
 
 scheduler:
 #   name: "torch.optim.lr_scheduler.ConstantLR"

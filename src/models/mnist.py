@@ -3,6 +3,7 @@ from pydantic import BaseModel
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torchmetrics.functional as metrics
 
 from ..trainer import ModelForTraining
 
@@ -60,6 +61,30 @@ class MnistModelForTraining(ModelForTraining, nn.Module):
             logits = self.model(self.fabric.to_device(pixel_values))
             assert logits.shape == (1, self.model_config.num_labels)
 
+    def log_metrics(self, logits: torch.Tensor, targets: torch.Tensor):
+        preds = torch.argmax(logits, dim=1)
+        targets = targets.squeeze()
+        accuracy = metrics.accuracy(
+            preds, targets, task="multiclass", num_classes=self.model_config.num_labels
+        )
+        precision = metrics.precision(
+            preds, targets, task="multiclass", num_classes=self.model_config.num_labels
+        )
+        recall = metrics.recall(
+            preds, targets, task="multiclass", num_classes=self.model_config.num_labels
+        )
+        f1 = metrics.f1_score(
+            preds, targets, task="multiclass", num_classes=self.model_config.num_labels
+        )
+
+        for name, value in {
+            "accuracy": accuracy,
+            "precision": precision,
+            "recall": recall,
+            "f1": f1,
+        }.items():
+            self.log(f"eval/{name}", value, on_step=False, on_epoch=True)
+
     def train_step(self, batch: tuple[torch.Tensor, torch.Tensor]):
         pixel_values, targets = batch
 
@@ -77,6 +102,7 @@ class MnistModelForTraining(ModelForTraining, nn.Module):
         loss = F.cross_entropy(logits, targets.squeeze())
 
         self.log("eval/loss", loss, on_step=False, on_epoch=True)
+        self.log_metrics(logits, targets)
 
         return loss
 
